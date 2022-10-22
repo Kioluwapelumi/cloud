@@ -8,23 +8,37 @@ plugins:
   - serverless-reqvalidator-plugin
   - serverless-aws-documentation
 
+package:
+  individually: true
+
 provider:
   name: aws
   runtime: nodejs12.x
+
+  # Enable gzip compression
+  apiGateway:
+    minimumCompressionSize: 1024
+
+  # Staging
   stage: ${opt:stage, 'dev'}
   region: ${opt:region, 'us-east-2'}
-  
-#  X-Ray Tracing
-  tracing: 
+
+  #  ENV Declaration(s)
+  environment:
+    PROJECT_NAME: pelu-serverless
+    TODOS_TABLE: pelu-serverless-todos-${self:provider.stage}
+    S3_BUCKET_NAME: pelu-serverless-todos-app-${self:provider.stage}
+    SIGNED_URL_EXPIRATION: 1000
+
+  #  X-Ray Tracing
+  tracing:
     lambda: true
     apiGateway: true
 
-  environment:
-    PROJECT_NAME: udacity
-    TODOS_TABLE: udacity-serverless-application-todo-${self:provider.stage}
-    S3_BUCKET_NAME: udacity-serverless-application-todo-${self:provider.stage}
-
 custom:
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules: true
   documentation:
     api:
       info:
@@ -59,14 +73,12 @@ custom:
               type: string
             done:
               type: boolean
-          
+
 
 functions:
-
   Auth:
     handler: src/lambda/auth/auth0Authorizer.handler
 
-  # TODO: Configure this function
   GetTodos:
     handler: src/lambda/http/getTodos.handler
     events:
@@ -84,11 +96,9 @@ functions:
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
-        Resource: 
+        Resource:
           - '*'
 
-  # TODO: Configure this function
- 
   CreateTodo:
     handler: src/lambda/http/createTodo.handler
     events:
@@ -98,7 +108,7 @@ functions:
           cors: true
           authorizer: Auth
           documentation:
-            summary: "Create a new todo item"
+            summary: "Create new todo item"
             description: "Create a new todo item"
             requestModels:
               "application/json": CreateTodoRequest
@@ -112,10 +122,9 @@ functions:
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
-        Resource: 
+        Resource:
           - '*'
 
-  # TODO: Configure this function
   UpdateTodo:
     handler: src/lambda/http/updateTodo.handler
     events:
@@ -139,10 +148,9 @@ functions:
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
-        Resource: 
+        Resource:
           - '*'
 
-  # DELETE: Configure this function
   DeleteTodo:
     handler: src/lambda/http/deleteTodo.handler
     events:
@@ -160,7 +168,7 @@ functions:
       - Effect: Allow
         Action:
           - xray:PutTraceSegments
-        Resource: 
+        Resource:
           - '*'
 
   # POST: Configure this function
@@ -177,12 +185,11 @@ functions:
       - Effect: Allow
         Action:
           - s3:*
-          - xray:PutTraceSegments 
+          - xray:PutTraceSegments
         Resource: arn:aws:s3:::${self:provider.environment.S3_BUCKET_NAME}/*
 
 resources:
   Resources:
-    # TODO: Add any necessary AWS resources
     TodosTable:
       Type: AWS::DynamoDB::Table
       Properties:
@@ -222,7 +229,7 @@ resources:
                 - POST
                 - DELETE
                 - HEAD
-              MaxAge: 300
+              MaxAge: 3000
 
     RequestBodyValidator:
       Type: AWS::ApiGateway::RequestValidator
@@ -233,7 +240,7 @@ resources:
         ValidateRequestBody: true
         ValidateRequestParameters: false
 
-    GatewayResponseDefault4XX:
+    GatewayResponseDefault4XX:                               # Required to satisfy CORS if Authorization is not granted
       Type: AWS::ApiGateway::GatewayResponse
       Properties:
         ResponseParameters:
@@ -253,7 +260,7 @@ resources:
           gatewayresponse.header.Access-Control-Allow-Methods: "'GET,OPTIONS,POST,DELETE,PATCH,PUT'"
         ResponseType: DEFAULT_5XX
         RestApiId:
-          Ref: ApiGatewayRestApi 
+          Ref: ApiGatewayRestApi
 
     BucketPolicy:
       Type: AWS::S3::BucketPolicy
