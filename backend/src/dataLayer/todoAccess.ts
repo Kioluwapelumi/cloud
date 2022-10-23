@@ -91,7 +91,7 @@ export class TodoAccess {
                 "dueDate": "dueDate",
                 "done": "done"
             },
-            ReturnValues: "NEW_VALUES:"
+            ReturnValues: "ALL_NEW:"
         };
 
         const result = await this.docClient.update(params).promise();
