@@ -80,18 +80,19 @@ export class TodoAccess {
                 "userId": userId,
                 "todoId": todoId
             },
-            UpdateExpression: "set #N = :name, dueDate = :dueDate, done = :done",
+            UpdateExpression: "set #N = :name, #dueDate = :dueDate, #done = :done",
+            ExpressionAttributeNames: {
+                "#N": "name",
+                "#dueDate": "dueDate",
+                "#done": "done"
+            },
             ExpressionAttributeValues: {
                 ":name": todoUpdate['name'],
                 ":dueDate": todoUpdate['dueDate'],
                 ":done": todoUpdate['done']
             },
-            ExpressionAttributeNames: {
-                "#N": "name",
-                "dueDate": "dueDate",
-                "done": "done"
-            },
-            ReturnValues: "ALL_NEW:"
+            
+            ReturnValues: "ALL_NEW"
         };
 
         const result = await this.docClient.update(params).promise();
